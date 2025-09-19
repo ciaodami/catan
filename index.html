@@ -1,380 +1,159 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Ranking Elo multiplo — 3/4 players</title>
-<style>
-  body{font-family:Inter,system-ui,Segoe UI,Arial;margin:20px;background:#f7f8fb;color:#111}
-  h1{margin:0 0 10px}
-  .container{max-width:1100px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 6px 20px rgba(18,38,63,.06)}
-  form{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;align-items:end;margin-bottom:12px}
-  label{font-size:12px;color:#555}
-  input[type="text"], input[type="number"], input[type="date"]{padding:8px;border:1px solid #ddd;border-radius:6px;width:100%}
-  button{padding:8px 12px;border-radius:8px;border:0;background:#0b79f7;color:white;cursor:pointer}
-  table{width:100%;border-collapse:collapse;margin-top:12px}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
-  th{background:#fafafa}
-  .row-actions{display:flex;gap:6px}
-  .small{font-size:12px;color:#666}
-  .grid-4{grid-column:span 3}
-  .grid-6{grid-column:span 6}
-  .grid-12{grid-column:span 12}
-  .muted{color:#777}
-  .btn-ghost{background:#f2f4f8;color:#333;border:1px solid #e6e9f2}
-  .flex{display:flex;gap:8px;align-items:center}
-  .right{margin-left:auto}
-  pre{background:#0f1720;color:#e6eef6;padding:10px;border-radius:6px;overflow:auto}
-  @media(max-width:800px){ form{grid-template-columns:repeat(6,1fr)} .grid-4{grid-column:span 3} }
-</style>
+  <meta charset="UTF-8">
+  <title>Catan Ranking System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    .form-section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; }
+    label { display: block; margin: 5px 0; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+  </style>
 </head>
 <body>
-<div class="container">
-  <h1>Ranking Elo (3/4 players)</h1>
-  <p class="small">Sistema: rating iniziale 1000, K=32. Normalizzazione punteggio: vedi impostazioni. I rating sono aggiornati in ordine cronologico delle partite.</p>
+  <h1>Catan Ranking System</h1>
 
-  <section>
-    <h3>1) Aggiungi / aggiorna giocatore</h3>
-    <form id="playerForm">
-      <div class="grid-4">
-        <label>Nome giocatore</label>
-        <input id="playerName" type="text" placeholder="Es: Mario" required />
-      </div>
-      <div class="grid-4">
-        <label>Rating iniziale (opzionale)</label>
-        <input id="playerRating" type="number" placeholder="1000" />
-      </div>
-      <div class="grid-4">
-        <label class="muted">&nbsp;</label>
-        <button type="submit">Aggiungi / aggiorna</button>
-      </div>
-    </form>
-  </section>
+  <!-- Inserimento partita -->
+  <div class="form-section">
+    <h2>Inserisci partita</h2>
+    <label>Data: <input type="date" id="match-date"></label>
+    
+    <label>Giocatore 1:
+      <input type="text" id="player1" list="players-list" oninput="checkNewPlayer(this)">
+      <input type="number" id="score1" min="0" placeholder="Punteggio">
+    </label>
+    <label>Giocatore 2:
+      <input type="text" id="player2" list="players-list" oninput="checkNewPlayer(this)">
+      <input type="number" id="score2" min="0" placeholder="Punteggio">
+    </label>
+    <label>Giocatore 3:
+      <input type="text" id="player3" list="players-list" oninput="checkNewPlayer(this)">
+      <input type="number" id="score3" min="0" placeholder="Punteggio">
+    </label>
+    <label>Giocatore 4:
+      <input type="text" id="player4" list="players-list" oninput="checkNewPlayer(this)">
+      <input type="number" id="score4" min="0" placeholder="Punteggio">
+    </label>
+    <datalist id="players-list"></datalist>
 
-  <hr/>
+    <button onclick="addMatch()">Aggiungi Partita</button>
+  </div>
 
-  <section>
-    <h3>2) Inserisci partita</h3>
-    <form id="matchForm">
-      <div class="grid-4">
-        <label>Data</label>
-        <input id="mDate" type="date" required />
-      </div>
-      <div class="grid-4">
-        <label>Giocatore 1</label>
-        <input id="p1" type="text" placeholder="Nome p1" />
-      </div>
-      <div class="grid-4">
-        <label>Punteggio 1</label>
-        <input id="s1" type="number" min="0" />
-      </div>
+  <!-- Classifica -->
+  <h2>Classifica</h2>
+  <table id="ranking-table">
+    <thead>
+      <tr><th>Nome</th><th>Rating</th><th>Partite</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-      <div class="grid-4">
-        <label>Giocatore 2</label>
-        <input id="p2" type="text" placeholder="Nome p2" />
-      </div>
-      <div class="grid-4">
-        <label>Punteggio 2</label>
-        <input id="s2" type="number" min="0" />
-      </div>
-
-      <div class="grid-4">
-        <label>Giocatore 3</label>
-        <input id="p3" type="text" placeholder="Nome p3 (opzionale)" />
-      </div>
-      <div class="grid-4">
-        <label>Punteggio 3</label>
-        <input id="s3" type="number" min="0" />
-      </div>
-
-      <div class="grid-4">
-        <label>Giocatore 4</label>
-        <input id="p4" type="text" placeholder="Nome p4 (opzionale)" />
-      </div>
-      <div class="grid-4">
-        <label>Punteggio 4</label>
-        <input id="s4" type="number" min="0" />
-      </div>
-
-      <div class="grid-12">
-        <label class="muted">&nbsp;</label>
-        <div class="flex">
-          <button type="submit">Aggiungi partita</button>
-          <div class="right">
-            <button id="recompute" type="button" class="btn-ghost">Ricalcola classifica</button>
-            <button id="clearAll" type="button" class="btn-ghost">Cancella tutto</button>
-          </div>
-        </div>
-      </div>
-    </form>
-  </section>
-
-  <hr/>
-
-  <section>
-    <h3>3) Classifica</h3>
-    <div id="rankingArea"></div>
-  </section>
-
-  <hr/>
-
-  <section>
-    <h3>4) Partite registrate</h3>
-    <div id="matchesArea"></div>
-  </section>
-
-  <hr/>
-
-  <section>
-    <h3>Salvataggio / Export</h3>
-    <div class="flex">
-      <button id="exportBtn" class="btn-ghost">Esporta JSON</button>
-      <input id="importFile" type="file" accept=".json" />
-    </div>
-    <p class="small">I dati sono automaticamente salvati nel browser (localStorage). Usa Export/Import per trasferire i dati.</p>
-  </section>
-</div>
+  <!-- Partite -->
+  <h2>Partite giocate</h2>
+  <table id="matches-table">
+    <thead>
+      <tr><th>Data</th><th>Giocatore</th><th>Punteggio</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
 <script>
-/*
-Implementazione del sistema:
-- players: { name -> { rating, played } }
-- matches: array di { date, players: [{name,score},...] }
-- recalcolo: ordina matches per data asc, per ogni match calcola per ogni giocatore:
-    numPlayers = count non-empty names
-    maxPossible = (numPlayers === 4) ? 14 : 13
-    normalized = score / maxPossible * (numPlayers / 4)
-    avgOpp = mean(rating of other players at that time)
-    expected = 1 / (1 + 10 ** ((avgOpp - rating)/400))
-    ratingDelta = K * (normalized - expected)
-    rating += ratingDelta
-- K, initial rating sono configurabili in top code
-*/
+let players = []; // elenco dinamico
+let matches = []; // archivio partite
+let ratings = {}; // rating dei giocatori
 
-const K = 32;
-const INITIAL_RATING = 1000;
+function updatePlayerList(inputValue="") {
+  const datalist = document.getElementById("players-list");
+  datalist.innerHTML = "";
 
-let state = {
-  players: {}, // name -> { rating: number, played: number }
-  matches: []  // { date: 'YYYY-MM-DD', players: [ {name,score}, ... ] }
-};
-
-function saveState(){
-  localStorage.setItem('elo_multi_state_v1', JSON.stringify(state));
-}
-
-function loadState(){
-  const raw = localStorage.getItem('elo_multi_state_v1');
-  if(raw) {
-    try {
-      state = JSON.parse(raw);
-      // ensure structure
-      state.players = state.players || {};
-      state.matches = state.matches || [];
-    } catch(e){
-      console.error('Import parse error', e);
+  players.forEach(p => {
+    if (p.toLowerCase().includes(inputValue.toLowerCase())) {
+      let option = document.createElement("option");
+      option.value = p;
+      datalist.appendChild(option);
     }
-  } else {
-    saveState();
-  }
-}
-
-function addOrUpdatePlayer(name, rating){
-  if(!name) return;
-  if(!state.players[name]) state.players[name] = { rating: Number(rating) || INITIAL_RATING, played: 0 };
-  else {
-    if(rating !== null && rating !== '') state.players[name].rating = Number(rating);
-  }
-  saveState();
-}
-
-function addMatch(date, entries){
-  // entries = [{name, score}, ...]
-  // sanitize: only keep entries with a name
-  const players = entries.filter(e => e.name && e.name.trim() !== '').map(e => ({ name: e.name.trim(), score: Number(e.score) || 0 }));
-  if(players.length < 2) return false;
-  state.matches.push({ date, players });
-  saveState();
-  return true;
-}
-
-function resetState(){
-  if(confirm('Confermi cancellazione completa dei dati?')) {
-    state = { players: {}, matches: [] };
-    saveState();
-    renderAll();
-  }
-}
-
-function mean(arr){
-  if(arr.length === 0) return 0;
-  return arr.reduce((a,b)=>a+b,0)/arr.length;
-}
-
-function recomputeRatings(){
-  // create deep copy of players' ratings to use as baseline
-  const playersSnapshot = {};
-  // initialize known players (but they may be created on the fly)
-  for(const n in state.players) {
-    playersSnapshot[n] = { rating: Number(state.players[n].rating) || INITIAL_RATING, played: 0 };
-  }
-  // ensure any player that appears in matches but not in players is created when first seen
-  // sort matches by date asc
-  const matches = state.matches.slice().sort((a,b)=> new Date(a.date) - new Date(b.date));
-  // reset counters
-  for(const k in playersSnapshot) playersSnapshot[k].played = 0;
-
-  // process matches sequentially
-  matches.forEach(match => {
-    const pList = match.players;
-    const numPlayers = pList.length;
-    const maxPossible = (numPlayers === 4) ? 14 : 13;
-
-    // ensure all players exist in snapshot
-    pList.forEach(p => {
-      if(!playersSnapshot[p.name]) playersSnapshot[p.name] = { rating: INITIAL_RATING, played: 0 };
-    });
-
-    // for each player compute normalized and expected using ratings at start of this match
-    const ratingsAtMatch = {};
-    pList.forEach(p => ratingsAtMatch[p.name] = playersSnapshot[p.name].rating);
-
-    // compute normalized scores
-    const normalizedScores = {};
-    pList.forEach(p => {
-      const normalized = (p.score / maxPossible) * (numPlayers / 4);
-      normalizedScores[p.name] = normalized;
-    });
-
-    // compute avgOpp and expected & apply K
-    pList.forEach(p => {
-      const name = p.name;
-      const rating = ratingsAtMatch[name];
-      // opponents = others in pList
-      const oppRatings = pList.filter(x=>x.name !== name).map(x=>ratingsAtMatch[x.name] || INITIAL_RATING);
-      const avgOpp = mean(oppRatings);
-      const expected = 1 / (1 + Math.pow(10, (avgOpp - rating)/400));
-      const delta = K * (normalizedScores[name] - expected);
-      playersSnapshot[name].rating = playersSnapshot[name].rating + delta;
-      playersSnapshot[name].played = (playersSnapshot[name].played || 0) + 1;
-    });
   });
 
-  // copy results back to state.players (and create new players if any)
-  for(const name in playersSnapshot){
-    state.players[name] = {
-      rating: Number(playersSnapshot[name].rating),
-      played: playersSnapshot[name].played || 0
-    };
+  if (inputValue && !players.some(p => p.toLowerCase() === inputValue.toLowerCase())) {
+    let option = document.createElement("option");
+    option.value = `+ Aggiungi "${inputValue}"`;
+    datalist.appendChild(option);
+  }
+}
+
+function checkNewPlayer(input) {
+  updatePlayerList(input.value);
+
+  if (input.value.startsWith("+ Aggiungi")) {
+    let newName = input.value.match(/"(.*)"/)[1];
+    players.push(newName);
+    if (!ratings[newName]) ratings[newName] = 1000; // rating iniziale
+    input.value = newName;
+    updatePlayerList();
+    updateRankingTable();
+  }
+}
+
+function addMatch() {
+  let date = document.getElementById("match-date").value;
+  let gamePlayers = [
+    {name: document.getElementById("player1").value, score: parseInt(document.getElementById("score1").value)||0},
+    {name: document.getElementById("player2").value, score: parseInt(document.getElementById("score2").value)||0},
+    {name: document.getElementById("player3").value, score: parseInt(document.getElementById("score3").value)||0},
+    {name: document.getElementById("player4").value, score: parseInt(document.getElementById("score4").value)||0},
+  ].filter(p => p.name);
+
+  if (gamePlayers.length < 2) {
+    alert("Inserisci almeno 2 giocatori.");
+    return;
   }
 
-  saveState();
-  renderAll();
-}
-
-function renderRanking(){
-  const container = document.getElementById('rankingArea');
-  // convert players to array and sort by rating desc
-  const arr = Object.keys(state.players).map(n => ({ name: n, rating: state.players[n].rating, played: state.players[n].played }));
-  arr.sort((a,b)=> b.rating - a.rating);
-  let html = '<table><thead><tr><th>#</th><th>Nome</th><th>Rating</th><th>Partite</th></tr></thead><tbody>';
-  arr.forEach((p,i)=>{
-    html += `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.rating.toFixed(1)}</td><td>${p.played}</td></tr>`;
-  });
-  html += '</tbody></table>';
-  container.innerHTML = html;
-}
-
-function renderMatches(){
-  const container = document.getElementById('matchesArea');
-  if(state.matches.length === 0){ container.innerHTML = '<p class="small muted">Nessuna partita registrata</p>'; return; }
-  let html = '<table><thead><tr><th>Data</th><th>Giocatori (score)</th></tr></thead><tbody>';
-  const sorted = state.matches.slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
-  sorted.forEach(m=>{
-    const players = m.players.map(p=>`${p.name} (${p.score})`).join(' — ');
-    html += `<tr><td>${m.date}</td><td>${players}</td></tr>`;
-  });
-  html += '</tbody></table>';
-  container.innerHTML = html;
-}
-
-function renderAll(){
-  renderRanking();
-  renderMatches();
-}
-
-// --- Event wiring ---
-document.getElementById('playerForm').addEventListener('submit', e=>{
-  e.preventDefault();
-  const name = document.getElementById('playerName').value.trim();
-  const rating = document.getElementById('playerRating').value;
-  if(!name) return alert('Inserisci un nome');
-  addOrUpdatePlayer(name, rating);
-  document.getElementById('playerName').value = '';
-  document.getElementById('playerRating').value = '';
-  renderAll();
-});
-
-document.getElementById('matchForm').addEventListener('submit', e=>{
-  e.preventDefault();
-  const date = document.getElementById('mDate').value || new Date().toISOString().slice(0,10);
-  const entries = [
-    { name: document.getElementById('p1').value.trim(), score: document.getElementById('s1').value },
-    { name: document.getElementById('p2').value.trim(), score: document.getElementById('s2').value },
-    { name: document.getElementById('p3').value.trim(), score: document.getElementById('s3').value },
-    { name: document.getElementById('p4').value.trim(), score: document.getElementById('s4').value }
-  ];
-  const ok = addMatch(date, entries);
-  if(!ok) return alert('Inserisci almeno 2 giocatori con nome.');
-  // clear form
-  document.getElementById('mDate').value = '';
-  ['p1','p2','p3','p4','s1','s2','s3','s4'].forEach(id=>document.getElementById(id).value='');
-  // recompute automatically
-  recomputeRatings();
-});
-
-document.getElementById('recompute').addEventListener('click', e=>{
-  recomputeRatings();
-});
-
-document.getElementById('clearAll').addEventListener('click', () => resetState());
-
-// export/import
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'elo_multi_export.json'; document.body.appendChild(a); a.click();
-  a.remove(); URL.revokeObjectURL(url);
-});
-
-document.getElementById('importFile').addEventListener('change', (ev)=>{
-  const f = ev.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const imported = JSON.parse(reader.result);
-      if(imported && imported.matches && imported.players){
-        if(confirm('Sovrascrivere i dati correnti con quelli importati?')) {
-          state = imported;
-          saveState();
-          renderAll();
-        }
-      } else {
-        alert('File non valido.');
-      }
-    } catch(e){
-      alert('Errore import: ' + e.message);
+  // aggiungi giocatori nuovi se non già presenti
+  gamePlayers.forEach(p => {
+    if (!players.includes(p.name)) {
+      players.push(p.name);
+      if (!ratings[p.name]) ratings[p.name] = 1000;
     }
-  };
-  reader.readAsText(f);
-});
+  });
 
-// load and init
-loadState();
-renderAll();
+  matches.push({date, players: gamePlayers});
+  updateMatchesTable();
+  updateRankingTable();
 
+  // reset form
+  document.querySelectorAll("input[type=text], input[type=number]").forEach(el => el.value = "");
+  document.getElementById("match-date").value = "";
+}
+
+function updateRankingTable() {
+  let tbody = document.querySelector("#ranking-table tbody");
+  tbody.innerHTML = "";
+
+  // conteggio partite giocate
+  let gamesCount = {};
+  players.forEach(p => gamesCount[p] = 0);
+  matches.forEach(m => m.players.forEach(p => gamesCount[p.name]++));
+
+  players.forEach(p => {
+    let tr = document.createElement("tr");
+    tr.innerHTML = `<td>${p}</td><td>${ratings[p]}</td><td>${gamesCount[p] || 0}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateMatchesTable() {
+  let tbody = document.querySelector("#matches-table tbody");
+  tbody.innerHTML = "";
+  matches.forEach(m => {
+    m.players.forEach(p => {
+      let tr = document.createElement("tr");
+      tr.innerHTML = `<td>${m.date}</td><td>${p.name}</td><td>${p.score}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
 </script>
 </body>
 </html>
