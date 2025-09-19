@@ -60,9 +60,10 @@
   </table>
 
 <script>
-let players = []; // elenco dinamico
-let matches = []; // archivio partite
-let ratings = {}; // rating dei giocatori
+let players = [];
+let matches = [];
+let ratings = {};
+const K = 32; // fattore di aggiornamento Elo
 
 function updatePlayerList(inputValue="") {
   const datalist = document.getElementById("players-list");
@@ -89,7 +90,7 @@ function checkNewPlayer(input) {
   if (input.value.startsWith("+ Aggiungi")) {
     let newName = input.value.match(/"(.*)"/)[1];
     players.push(newName);
-    if (!ratings[newName]) ratings[newName] = 1000; // rating iniziale
+    if (!ratings[newName]) ratings[newName] = 1000;
     input.value = newName;
     updatePlayerList();
     updateRankingTable();
@@ -110,13 +111,16 @@ function addMatch() {
     return;
   }
 
-  // aggiungi giocatori nuovi se non già presenti
+  // aggiungi giocatori nuovi
   gamePlayers.forEach(p => {
     if (!players.includes(p.name)) {
       players.push(p.name);
       if (!ratings[p.name]) ratings[p.name] = 1000;
     }
   });
+
+  // aggiorna ranking Elo
+  updateRatings(gamePlayers);
 
   matches.push({date, players: gamePlayers});
   updateMatchesTable();
@@ -127,16 +131,32 @@ function addMatch() {
   document.getElementById("match-date").value = "";
 }
 
+function updateRatings(gamePlayers) {
+  let maxScore = Math.max(...gamePlayers.map(p => p.score));
+  let numPlayers = gamePlayers.length;
+
+  gamePlayers.forEach(player => {
+    let oldRating = ratings[player.name];
+    let normScore = player.score / maxScore; // punteggio normalizzato (0..1)
+    let avgOpponents = gamePlayers.filter(p => p.name !== player.name)
+                                  .reduce((sum,p)=>sum+ratings[p.name],0)/(numPlayers-1);
+    let expected = 1 / (1 + Math.pow(10, (avgOpponents - oldRating) / 400));
+    let newRating = oldRating + K * (normScore - expected);
+    ratings[player.name] = Math.round(newRating);
+  });
+}
+
 function updateRankingTable() {
   let tbody = document.querySelector("#ranking-table tbody");
   tbody.innerHTML = "";
 
-  // conteggio partite giocate
   let gamesCount = {};
   players.forEach(p => gamesCount[p] = 0);
   matches.forEach(m => m.players.forEach(p => gamesCount[p.name]++));
 
-  players.forEach(p => {
+  let sorted = [...players].sort((a,b) => ratings[b] - ratings[a]);
+
+  sorted.forEach(p => {
     let tr = document.createElement("tr");
     tr.innerHTML = `<td>${p}</td><td>${ratings[p]}</td><td>${gamesCount[p] || 0}</td>`;
     tbody.appendChild(tr);
@@ -147,7 +167,9 @@ function updateMatchesTable() {
   let tbody = document.querySelector("#matches-table tbody");
   tbody.innerHTML = "";
   matches.forEach(m => {
-    m.players.forEach(p => {
+    // ordina i giocatori della partita per punteggio decrescente
+    let sortedPlayers = [...m.players].sort((a,b)=>b.score - a.score);
+    sortedPlayers.forEach(p => {
       let tr = document.createElement("tr");
       tr.innerHTML = `<td>${m.date}</td><td>${p.name}</td><td>${p.score}</td>`;
       tbody.appendChild(tr);
